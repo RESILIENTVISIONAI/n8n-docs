@@ -484,6 +484,120 @@ Acceptance Criteria:
 
 ---
 
+#### 6.1.8 Hardcore Accountability Mode - App Blocking
+**Priority**: P1 (High - Unique Differentiator)
+
+**Requirements**:
+- FR-8.1: Automatic app blocking when daily tasks not completed by midnight
+  - Blocks all non-essential apps on device
+  - Allows communication apps only:
+    - Phone app (calls)
+    - Messages (iMessage, SMS)
+    - WhatsApp
+    - Emergency apps (Settings, Health)
+  - Peruchito app remains accessible to complete tasks
+
+- FR-8.2: Blocking trigger conditions:
+  - Timer reaches 00:00:00 (midnight ET)
+  - Minimum task threshold not met (configurable: 1-12 tasks)
+  - Default: At least 1 task must be completed
+
+- FR-8.3: User authorization flow:
+  - Requires explicit opt-in during onboarding
+  - Uses iOS Screen Time/Family Controls API
+  - User grants parental control permissions
+  - Clear explanation of what will be blocked
+  - Can be disabled in settings (with confirmation)
+
+- FR-8.4: Blocking behavior:
+  - Blocks apps immediately at midnight if criteria not met
+  - Shows custom blocking screen: "Complete your daily tasks in Peruchito to unlock"
+  - Provides "Open Peruchito" button
+  - Remains blocked until minimum tasks completed
+
+- FR-8.5: Unblocking mechanism:
+  - Automatically unblocks when minimum tasks completed
+  - Immediate unlock (no delay)
+  - Success notification: "Apps unlocked! Great discipline 💪"
+  - Resets for next day cycle
+
+- FR-8.6: Emergency override:
+  - "Emergency Override" button (requires 3 confirmations)
+  - Disables blocking for 24 hours
+  - Costs discipline stats (-50 DIS penalty)
+  - Shows warning: "Using emergency override will decrease your Discipline stat"
+  - Logs override in history
+
+- FR-8.7: Customization options:
+  - Set minimum task count (1-12 tasks)
+  - Choose which apps to allow (whitelist)
+  - Set grace period (0-60 minutes after midnight)
+  - Weekend mode (disable blocking on Sat/Sun)
+  - Hardcore mode (no override available)
+
+- FR-8.8: Visual indicators:
+  - Home screen shows blocking status
+  - Timer shows warning colors:
+    - Green: >6 hours remaining
+    - Yellow: 3-6 hours remaining
+    - Orange: 1-3 hours remaining
+    - Red: <1 hour + minimum tasks not met
+  - Pulsing "URGENT" indicator when < 30 min
+
+**Technical Implementation**:
+- Use iOS 16+ **Screen Time API** and **Family Controls** framework
+- Requires `FamilyControls` entitlement from Apple
+- `ManagedSettingsStore` for blocking configuration
+- `DeviceActivityMonitor` for midnight trigger
+- `AuthorizationCenter` for parental controls permission
+
+**Privacy & Safety**:
+- Clear privacy disclosure in App Store description
+- Cannot be bypassed without user permission revocation
+- Emergency override always available (with penalty)
+- No data collection on blocked app usage
+- User maintains full control via iOS Settings
+
+**User Stories**:
+```
+AS A disciplined user
+I WANT my phone to block distracting apps if I don't complete tasks
+SO THAT I'm forced to prioritize my daily goals
+
+AS A procrastinator
+I WANT a consequence for missing my tasks
+SO THAT I build consistent habits through accountability
+
+AS A hardcore user
+I WANT no escape from my commitments
+SO THAT I achieve my transformation goals faster
+```
+
+**Acceptance Criteria**:
+- ✅ User can enable/disable blocking mode in settings
+- ✅ Blocking triggers exactly at midnight if minimum tasks not met
+- ✅ Communication apps remain accessible
+- ✅ Peruchito app remains accessible
+- ✅ Apps unlock immediately when tasks completed
+- ✅ Emergency override works with stat penalty
+- ✅ Warning indicators display correctly
+- ✅ All blocking configurations save properly
+
+**UX Considerations**:
+- **Onboarding**: Clear explanation with video/animation showing how it works
+- **Warnings**: Multiple reminders as midnight approaches
+- **Transparency**: Show list of apps that will be blocked
+- **Escape Hatch**: Emergency override with clear consequences
+- **Motivation**: Positive reinforcement when unlocked successfully
+
+**App Store Compliance**:
+- Clearly describe blocking functionality in App Store description
+- Mark as "Parental Controls" or "Screen Time Management" category
+- Include screenshots showing blocking feature
+- Age rating: 4+ (requires parental permission for under 13)
+
+---
+
 ### 6.2 Enhanced Features (Post-MVP - Should Have)
 
 #### 6.2.1 Mission System
