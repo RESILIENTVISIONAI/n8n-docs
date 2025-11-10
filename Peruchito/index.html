@@ -13,10 +13,21 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
     :root {
+      /* Static colors */
       --black: #000000;
-      --purple: #A78BFA;
-      --purple-dark: #7C3AED;
       --white: #FFFFFF;
+      --cream: #F7F1EA;
+
+      /* Dynamic rank theme colors - updated by rank progression */
+      --color-secondary: #7C3AED;   /* Default: Master Purple (dark) */
+      --color-accent: #A78BFA;      /* Default: Master Purple (light) */
+      --gradient-start: #7C3AED;
+      --gradient-mid: #A78BFA;
+      --gradient-end: #DDD6FE;
+
+      /* Legacy support */
+      --purple: var(--color-accent);
+      --purple-dark: var(--color-secondary);
     }
 
     * {
@@ -35,8 +46,9 @@
 
     .glass {
       background: rgba(15, 15, 15, 0.9);
-      border: 1px solid rgba(167, 139, 250, 0.3);
+      border: 1px solid var(--color-secondary);
       border-radius: 16px;
+      transition: border-color 0.5s ease;
     }
 
     .glass-dark {
@@ -67,36 +79,37 @@
     .border-gold { border-color: #A78BFA; }
 
     .progress-bar {
-      background: linear-gradient(90deg, #A78BFA 0%, #7C3AED 100%);
+      background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-secondary) 100%);
       height: 8px;
       border-radius: 4px;
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+      box-shadow: 0 0 10px var(--color-accent);
     }
 
     .progress-container {
       background: rgba(167, 139, 250, 0.1);
       border-radius: 4px;
       overflow: hidden;
-      border: 1px solid rgba(167, 139, 250, 0.3);
+      border: 1px solid var(--color-secondary);
+      transition: border-color 0.5s ease;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%);
+      background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
       color: #FFFFFF;
       font-weight: 600;
       border: none;
       border-radius: 8px;
       padding: 12px 24px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 15px rgba(167, 139, 250, 0.4);
+      transition: all 0.2s ease, background 0.5s ease;
+      box-shadow: 0 4px 15px var(--color-accent);
     }
 
     .btn-primary:hover {
-      background: linear-gradient(135deg, #C4B5FD 0%, #8B5CF6 100%);
+      background: linear-gradient(135deg, var(--gradient-mid) 0%, var(--gradient-start) 100%);
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(167, 139, 250, 0.6);
+      box-shadow: 0 6px 20px var(--color-accent);
     }
 
     .btn-success {
@@ -1102,6 +1115,118 @@
       return { nextRank: null, progress: 100, statsNeeded: 0 };
     }
 
+    // Dynamic rank theming system
+    let previousRankName = null;
+
+    function updateRankTheme() {
+      const { rank } = getCurrentRank();
+
+      // Update CSS variables based on current rank
+      const secondary = rank.gradient.split(',')[0].split('(')[1].trim();
+      const accent = rank.gradient.split(',')[1].trim();
+
+      document.documentElement.style.setProperty('--color-secondary', secondary);
+      document.documentElement.style.setProperty('--color-accent', accent);
+      document.documentElement.style.setProperty('--gradient-start', secondary);
+      document.documentElement.style.setProperty('--gradient-mid', accent);
+
+      // Extract last gradient color
+      const gradientParts = rank.gradient.match(/#[0-9A-Fa-f]{6}/g);
+      if (gradientParts && gradientParts.length >= 3) {
+        document.documentElement.style.setProperty('--gradient-end', gradientParts[2]);
+      }
+
+      // Notify Swift app of rank change (for iOS integration)
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.rankChanged) {
+        window.webkit.messageHandlers.rankChanged.postMessage(rank.name);
+      }
+
+      // Check for rank up and show celebration
+      if (previousRankName && previousRankName !== rank.name) {
+        showRankUpCelebration(previousRankName, rank.name);
+      }
+
+      previousRankName = rank.name;
+    }
+
+    // Called from Swift to update theme
+    window.updateTheme = function(theme) {
+      console.log('Theme updated from Swift:', theme);
+
+      document.documentElement.style.setProperty('--color-secondary', theme.secondary);
+      document.documentElement.style.setProperty('--color-accent', theme.accent);
+      document.documentElement.style.setProperty('--gradient-start', theme.gradient[0]);
+      document.documentElement.style.setProperty('--gradient-mid', theme.gradient[1]);
+
+      if (theme.gradient[2]) {
+        document.documentElement.style.setProperty('--gradient-end', theme.gradient[2]);
+      }
+    };
+
+    function showRankUpCelebration(oldRank, newRank) {
+      const rankIcons = {
+        'Unranked': '⚪', 'Bronze': '🥉', 'Silver': '🥈', 'Gold': '🥇',
+        'Platinum': '💎', 'Diamond': '💠', 'Master': '👑',
+        'Grandmaster': '⚡', 'Legendary': '🔥'
+      };
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: fadeIn 0.5s ease;
+      `;
+
+      overlay.innerHTML = `
+        <div style="text-align: center; animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+          <div style="font-size: 72px; margin-bottom: 20px;">${rankIcons[newRank] || '⭐'}</div>
+          <div style="font-size: 48px; font-weight: 800; color: var(--color-accent); text-shadow: 0 0 30px var(--color-accent);">
+            RANK UP!
+          </div>
+          <div style="font-size: 32px; font-weight: 700; color: white; margin-top: 10px;">
+            ${newRank}
+          </div>
+          <div style="font-size: 16px; color: rgba(255,255,255,0.7); margin-top: 20px;">
+            Tap to continue
+          </div>
+        </div>
+      `;
+
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.5); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', () => {
+        overlay.style.animation = 'fadeIn 0.3s ease reverse';
+        setTimeout(() => overlay.remove(), 300);
+      });
+
+      setTimeout(() => {
+        if (overlay.parentElement) {
+          overlay.style.animation = 'fadeIn 0.3s ease reverse';
+          setTimeout(() => overlay.remove(), 300);
+        }
+      }, 5000);
+    }
+
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
@@ -1293,6 +1418,7 @@
       showToast(task.name, `+${task.xp} XP, +${task.coins} coins`, 'success');
 
       closePhotoModal();
+      updateRankTheme(); // Update theme if rank changed
       saveState();
       renderStatic();
     }
@@ -2505,6 +2631,7 @@
     }
 
     loadState();
+    updateRankTheme(); // Initialize theme based on current rank
     renderStatic();
     setInterval(updateTimer, 1000);
 
